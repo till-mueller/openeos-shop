@@ -46,6 +46,7 @@ export default function CheckoutReturnPage() {
 
   const status = verifyQuery.data?.data.status;
   const orderNumber = verifyQuery.data?.data.orderNumber;
+  const tse = verifyQuery.data?.data.tse;
 
   useEffect(() => {
     if (status === 'paid') {
@@ -97,6 +98,11 @@ export default function CheckoutReturnPage() {
           <p style={{ fontSize: 13, color: 'var(--mute)', marginTop: 20 }}>
             Eine Bestätigung wird per E-Mail verschickt.
           </p>
+          {tse?.fiscalized && (
+            <p style={{ fontSize: 12, color: 'var(--mute)', marginTop: 8 }}>
+              Fiskalisiert (TSE-Transaktion {tse.transactionNumber})
+            </p>
+          )}
           <button
             type="button"
             className="btn btn--ghost"

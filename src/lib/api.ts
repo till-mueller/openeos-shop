@@ -152,7 +152,11 @@ export const shopApi = {
     ),
 
   verifyCheckout: (checkoutId: string) =>
-    get<{ data: { status: 'pending' | 'paid' | 'failed' | 'cancelled'; orderNumber?: string } }>(
-      `/public/shop/checkout/${checkoutId}/verify`,
-    ),
+    get<{
+      data: {
+        status: 'pending' | 'paid' | 'failed' | 'cancelled';
+        orderNumber?: string;
+        tse?: { fiscalized: boolean; transactionNumber?: number };
+      };
+    }>(`/public/shop/checkout/${checkoutId}/verify`),
 };
