@@ -89,10 +89,14 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           # NEXT_PUBLIC_* vars are inlined at build time (visible in browser).
-          # Non-secret; hardcoded production URLs below.
+          # Non-secret. NEXT_PUBLIC_API_URL bakes the sentinel token the
+          # Dockerfile defaults to, not a hardcoded domain —
+          # docker-entrypoint.sh rewrites it to the real runtime value on
+          # container start, so the published image works for any
+          # deployment domain, not just the one baked at CI time.
           build-args: |
             NEXT_PUBLIC_APP_VERSION=1.0.${{ github.run_number }}
-            NEXT_PUBLIC_API_URL=https://api.openeos.de/api
+            NEXT_PUBLIC_API_URL=__RUNTIME_NEXT_PUBLIC_API_URL__
 
   deploy:
     name: Deploy to production
