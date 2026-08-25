@@ -1,0 +1,28 @@
+# Self-hosted / airgapped deployment for OpenEOS Shop.
+#
+# No Traefik, no ACME/Let's Encrypt, no external "frontend" network —
+# publishes the app directly on a host port.
+#
+# NEXT_PUBLIC_API_URL below is not baked into this image at build time —
+# the published ghcr.io image bakes a sentinel token instead, and the
+# container's entrypoint (docker-entrypoint.sh) rewrites it to whatever you
+# set here on every container start.
+#
+# Airgap flow:
+#   1. On a machine with internet access:
+#        docker pull ghcr.io/openeos-project/openeos-shop:latest
+#        docker save -o openeos-shop.tar ghcr.io/openeos-project/openeos-shop:latest
+#   2. Copy the tar to the offline host and load it:
+#        docker load -i openeos-shop.tar
+#   3. docker compose -f docker-compose.airgap.yml up -d
+
+services:
+  shop:
+    image: ${SHOP_IMAGE:-ghcr.io/openeos-project/openeos-shop:latest}
+    container_name: openeos-shop
+    restart: unless-stopped
+    ports:
+      - "3004:3004"
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000/api}
