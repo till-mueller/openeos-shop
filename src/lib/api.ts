@@ -66,7 +66,19 @@ export interface ShopTimeWindow {
 }
 export type ShopOpeningHours = Partial<Record<ShopWeekday, ShopTimeWindow | null>>;
 
+/** Ein konkretes Öffnungsfenster mit ISO-Zeitpunkten. Kann über Mitternacht laufen. */
+export interface ShopWindow {
+  start: string;
+  end: string;
+}
+
 export interface ShopMeta {
+  /** 'event': aus dem Veranstaltungszeitraum abgeleitet. 'weekly': Wochentags-Tabelle. */
+  hoursMode: 'event' | 'weekly';
+  /** Die tatsächlichen Öffnungsfenster — in beiden Modi gefüllt. */
+  windows: ShopWindow[];
+  /** Nächste Öffnung in der Zukunft, sonst null. */
+  nextOpening: string | null;
   openingHours: ShopOpeningHours | null;
   serviceFee: number;
   isOpenNow: boolean;

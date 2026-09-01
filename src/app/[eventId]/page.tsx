@@ -11,6 +11,7 @@ import {
   type ShopCategory,
   type ShopMeta,
   type ShopEvent,
+  type ShopWindow,
   type SelectedOption,
 } from '@/lib/api';
 import {
@@ -26,35 +27,25 @@ import { APP_VERSION } from '@/lib/version';
 import { ProductImage } from '@/components/product-image';
 import { formatPrice } from '@/lib/format';
 
-const WEEKDAY_LABELS: Record<string, string> = {
-  mon: 'Mo',
-  tue: 'Di',
-  wed: 'Mi',
-  thu: 'Do',
-  fri: 'Fr',
-  sat: 'Sa',
-  sun: 'So',
-};
+const WINDOW_DAY = new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' });
+const WINDOW_TIME = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' });
 
-function todaysWindow(meta: ShopMeta): string | null {
-  if (!meta.openingHours) return null;
-  const keys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
-  const today = keys[new Date().getDay()];
-  const window = meta.openingHours[today];
-  if (!window) return null;
-  return `${window.start} – ${window.end}`;
+/** Ein Fenster als "Sa., 05.09. · 18:00 – 03:00". */
+function formatWindow(window: ShopWindow): { label: string; window: string } {
+  const from = new Date(window.start);
+  const until = new Date(window.end);
+  return {
+    label: WINDOW_DAY.format(from),
+    window: `${WINDOW_TIME.format(from)} – ${WINDOW_TIME.format(until)}`,
+  };
 }
 
-function weeklySchedule(meta: ShopMeta): { label: string; window: string }[] {
-  if (!meta.openingHours) return [];
-  return ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
-    .map((k) => {
-      const w = meta.openingHours?.[k as keyof typeof meta.openingHours];
-      return {
-        label: WEEKDAY_LABELS[k],
-        window: w ? `${w.start} – ${w.end}` : 'geschlossen',
-      };
-    });
+/** Das Fenster, das gerade läuft oder als nächstes beginnt. */
+function upcomingWindow(meta: ShopMeta): ShopWindow | null {
+  const now = Date.now();
+  return (
+    meta.windows.find((w) => now < new Date(w.end).getTime()) ?? null
+  );
 }
 
 export default function ShopEventPage() {
@@ -583,46 +574,31 @@ function ProductCard({ product, currency, disabled, onAdd }: ProductCardProps) {
 }
 
 function ClosedCard({ meta, event }: { meta: ShopMeta; event: ShopEvent }) {
-  const now = new Date();
-  const start = event.startDate ? new Date(event.startDate) : null;
-  const end = event.endDate ? new Date(event.endDate) : null;
-  const fmt = (d: Date) => d.toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' });
+  const now = Date.now();
+  const fmtDate = (d: Date) => d.toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' });
+  const next = upcomingWindow(meta);
 
   let title = 'Shop ist gerade geschlossen';
   let message: string;
-  let showHours = true;
 
-  if (start) {
-    const startDay = new Date(start);
-    startDay.setHours(0, 0, 0, 0);
-    if (now < startDay) {
-      title = 'Shop ist noch nicht geöffnet';
-      message = `Bestellungen sind ab dem ${fmt(start)} möglich.`;
-      showHours = false;
-    } else if (end) {
-      const endDay = new Date(end);
-      endDay.setHours(23, 59, 59, 999);
-      if (now > endDay) {
-        title = 'Event ist beendet';
-        message = `Das Event lief bis zum ${fmt(end)}. Es können keine Bestellungen mehr aufgegeben werden.`;
-        showHours = false;
-      } else {
-        message = todaysWindow(meta)
-          ? `Heute geöffnet: ${todaysWindow(meta)}. Bestellungen sind nur innerhalb der Öffnungszeiten möglich.`
-          : 'Heute hat der Shop nicht geöffnet. Bestellungen sind nur innerhalb der Öffnungszeiten möglich.';
-      }
-    } else {
-      message = todaysWindow(meta)
-        ? `Heute geöffnet: ${todaysWindow(meta)}. Bestellungen sind nur innerhalb der Öffnungszeiten möglich.`
-        : 'Heute hat der Shop nicht geöffnet. Bestellungen sind nur innerhalb der Öffnungszeiten möglich.';
-    }
+  if (meta.windows.length === 0) {
+    // Ohne Fenster gibt es keinen Zeitraum, auf den man vertrösten könnte.
+    title = 'Shop ist nicht verfügbar';
+    message = 'Für diese Veranstaltung sind keine Öffnungszeiten hinterlegt.';
+  } else if (!next) {
+    const last = meta.windows[meta.windows.length - 1];
+    title = 'Veranstaltung ist beendet';
+    message = `Die Veranstaltung lief bis zum ${fmtDate(new Date(last.end))}. Es können keine Bestellungen mehr aufgegeben werden.`;
   } else {
-    message = todaysWindow(meta)
-      ? `Heute geöffnet: ${todaysWindow(meta)}. Bestellungen sind nur innerhalb der Öffnungszeiten möglich.`
-      : 'Heute hat der Shop nicht geöffnet. Bestellungen sind nur innerhalb der Öffnungszeiten möglich.';
+    const opensAt = new Date(next.start);
+    const sameDay = new Date(opensAt).toDateString() === new Date(now).toDateString();
+    title = opensAt.getTime() > now ? 'Shop ist noch nicht geöffnet' : title;
+    message = sameDay
+      ? `Heute ab ${WINDOW_TIME.format(opensAt)} können Bestellungen aufgegeben werden.`
+      : `Bestellungen sind ab ${WINDOW_DAY.format(opensAt)} um ${WINDOW_TIME.format(opensAt)} möglich.`;
   }
 
-  const week = showHours ? weeklySchedule(meta) : [];
+  const schedule = meta.windows.slice(0, 14).map(formatWindow);
 
   return (
     <div className="shop-banner shop-banner--closed" role="alert">
@@ -630,10 +606,10 @@ function ClosedCard({ meta, event }: { meta: ShopMeta; event: ShopEvent }) {
       <div style={{ minWidth: 0 }}>
         <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--ink)' }}>{title}</h2>
         <p style={{ fontSize: 13, color: 'var(--mute)', margin: '4px 0 0' }}>{message}</p>
-        {week.length > 0 && (
+        {schedule.length > 0 && (
           <ul className="shop-hours-list">
-            {week.map((d) => (
-              <li key={d.label}>
+            {schedule.map((d, index) => (
+              <li key={`${d.label}-${index}`}>
                 <span className="shop-hours-list__day">{d.label}</span>
                 <span className="mono">{d.window}</span>
               </li>
