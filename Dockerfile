@@ -18,7 +18,13 @@ COPY . .
 
 # Build arguments for environment variables at build time
 # (NEXT_PUBLIC_* values are baked into the client bundle)
-ARG NEXT_PUBLIC_API_URL
+# NEXT_PUBLIC_API_URL defaults to a sentinel token instead of a real URL:
+# it still gets inlined into the client bundle at build time, but
+# docker-entrypoint.sh rewrites that token to the real runtime value on
+# container start. Lets one built image be redeployed against a different
+# api domain (self-hosted / airgapped installs) without a rebuild. Pass a
+# real URL as a build-arg instead for the classic bake-only behavior.
+ARG NEXT_PUBLIC_API_URL=__RUNTIME_NEXT_PUBLIC_API_URL__
 ARG NEXT_PUBLIC_APP_VERSION=dev
 
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
@@ -42,6 +48,8 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
 
 USER nextjs
 
@@ -50,4 +58,5 @@ EXPOSE 3004
 ENV PORT=3004
 ENV HOSTNAME="0.0.0.0"
 
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["node", "server.js"]

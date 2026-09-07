@@ -35,6 +35,20 @@ Der Dev-Server läuft standardmäßig auf [http://localhost:3004](http://localho
 docker compose up -d --build
 ```
 
+### Airgapped / Self-Hosted Deployment
+
+For a closed network (no Traefik, no ACME, no public DNS) use `docker-compose.airgap.yml`:
+
+```bash
+docker pull ghcr.io/openeos-project/openeos-shop:latest
+docker save -o openeos-shop.tar ghcr.io/openeos-project/openeos-shop:latest
+# copy openeos-shop.tar to the offline host, then:
+docker load -i openeos-shop.tar
+NEXT_PUBLIC_API_URL=http://<api-host>:3000/api docker compose -f docker-compose.airgap.yml up -d
+```
+
+`NEXT_PUBLIC_API_URL` is normally inlined into the client bundle at build time, but the published image bakes a sentinel token instead of a real domain — `docker-entrypoint.sh` rewrites it to the runtime value above on every container start, so the same pulled image works against any api host without a rebuild.
+
 ## Automatisches Deployment
 
 Nach jedem erfolgreichen Image-Build auf `main` (Workflow `.github/workflows/build-deploy.yaml`, Job `deploy`) kann automatisch auf den Produktionsserver deployed werden. Der Deploy-Job ist standardmäßig deaktiviert und muss explizit aktiviert werden.
