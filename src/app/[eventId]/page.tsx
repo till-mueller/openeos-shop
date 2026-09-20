@@ -25,6 +25,7 @@ import {
 import { ProductOptionsSheet } from './components/product-options-sheet';
 import { APP_VERSION } from '@/lib/version';
 import { ProductImage } from '@/components/product-image';
+import { LegalFooter } from '@/components/legal-footer';
 import { formatPrice } from '@/lib/format';
 
 const WINDOW_DAY = new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' });
@@ -176,6 +177,7 @@ export default function ShopEventPage() {
   const count = cartCount(items as CartItem[]);
   const itemsTotal = cartTotal(items as CartItem[]);
   const total = itemsTotal + (items.length > 0 ? serviceFee : 0);
+  const vatExempt = shopQuery.data?.data.vatExempt !== false;
 
   const handleProductAdd = (product: ShopProduct) => {
     if (product.options?.groups && product.options.groups.length > 0) {
@@ -386,6 +388,11 @@ export default function ShopEventPage() {
                     <span>Gesamt</span>
                     <span className="mono">{formatPrice(total, currency)}</span>
                   </div>
+                  <p className="shop-cart__vat-note">
+                    {vatExempt
+                      ? 'Gemäß § 19 UStG wird keine Umsatzsteuer ausgewiesen.'
+                      : 'Alle Preise inkl. gesetzlicher MwSt.'}
+                  </p>
                   <button
                     type="button"
                     className="btn btn--primary"
@@ -411,6 +418,8 @@ export default function ShopEventPage() {
       >
         OpenEOS Shop v{APP_VERSION}
       </footer>
+
+      <LegalFooter eventId={eventId} legal={shopQuery.data?.data.legal} />
 
       {/* Floating cart bar — mobile only */}
       {count > 0 && isOpen && (
@@ -521,6 +530,11 @@ export default function ShopEventPage() {
               <span>Gesamt</span>
               <span className="mono">{formatPrice(total, currency)}</span>
             </div>
+            <p className="shop-cart__vat-note">
+              {vatExempt
+                ? 'Gemäß § 19 UStG wird keine Umsatzsteuer ausgewiesen.'
+                : 'Alle Preise inkl. gesetzlicher MwSt.'}
+            </p>
             <button
               type="button"
               className="btn btn--primary"

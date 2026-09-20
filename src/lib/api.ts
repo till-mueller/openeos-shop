@@ -85,6 +85,13 @@ export interface ShopMeta {
   testMode: boolean;
 }
 
+export interface ShopLegalTexts {
+  imprint?: string | null;
+  privacy?: string | null;
+  terms?: string | null;
+  cancellation?: string | null;
+}
+
 export interface ShopCategory {
   id: string;
   name: string;
@@ -135,7 +142,15 @@ export interface ShopProduct {
 
 export const shopApi = {
   getShop: (eventId: string) =>
-    get<{ data: { event: ShopEvent; currency: string; shop: ShopMeta } }>(`/public/shop/${eventId}`),
+    get<{
+      data: {
+        event: ShopEvent;
+        currency: string;
+        vatExempt: boolean;
+        legal: ShopLegalTexts | null;
+        shop: ShopMeta;
+      };
+    }>(`/public/shop/${eventId}`),
 
   getCategories: (eventId: string) =>
     get<{ data: ShopCategory[] }>(`/public/shop/${eventId}/categories`),
