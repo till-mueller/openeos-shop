@@ -566,6 +566,11 @@ button {
   color: var(--mute);
   margin: 8px 0 0;
 }
+.shop-cart__vat-note {
+  font-size: 11px;
+  color: var(--mute);
+  margin: 8px 0 0;
+}
 
 /* Hide mobile floating bar on desktop where sidebar is visible */
 @media (min-width: 900px) {
@@ -976,4 +981,36 @@ button {
 .field input:focus {
   border-color: var(--green-ink);
   box-shadow: 0 0 0 2px color-mix(in oklab, var(--green-ink) 25%, transparent);
+}
+
+/* Legal pages (Impressum, Datenschutz, AGB, Widerruf) */
+.legal-markdown {
+  line-height: 1.65;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.legal-markdown h1,
+.legal-markdown h2,
+.legal-markdown h3,
+.legal-markdown h4 {
+  color: var(--ink);
+  line-height: 1.3;
+  margin: 1.4em 0 0.5em;
+}
+.legal-markdown h1:first-child,
+.legal-markdown h2:first-child {
+  margin-top: 0;
+}
+.legal-markdown p,
+.legal-markdown ul,
+.legal-markdown ol {
+  margin: 0.8em 0;
+}
+.legal-markdown ul,
+.legal-markdown ol {
+  padding-left: 1.4em;
+}
+.legal-markdown a {
+  color: var(--green-ink);
+  text-decoration: underline;
 }

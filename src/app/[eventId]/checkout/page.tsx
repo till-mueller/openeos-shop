@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { shopApi, ShopApiError } from '@/lib/api';
 import { useCartStore, useCartHydration, cartTotal, lineUnitPrice, type CartItem } from '@/stores/cart-store';
 import { PaymentMethods } from '@/components/payment-methods';
+import { LegalFooter } from '@/components/legal-footer';
 import { formatPrice } from '@/lib/format';
 
 interface FriendlyError {
@@ -69,6 +70,7 @@ export default function CheckoutPage() {
   const [tableNumber, setTableNumber] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<FriendlyError | null>(null);
+  const [legalAccepted, setLegalAccepted] = useState(false);
 
   const shopQuery = useQuery({
     queryKey: ['shop', eventId],
@@ -94,11 +96,15 @@ export default function CheckoutPage() {
   const serviceFee = shopQuery.data?.data.shop.serviceFee ?? 0;
   const itemsTotal = cartTotal(items as CartItem[]);
   const total = itemsTotal + (items.length > 0 ? serviceFee : 0);
+  const vatExempt = shopQuery.data?.data.vatExempt !== false;
+  const shop = shopQuery.data?.data;
+  const legalRequired = Boolean(shop?.legal?.terms || shop?.legal?.cancellation);
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const nameValid = firstName.trim().length >= 2 && lastName.trim().length >= 2;
   const tableValid = fulfillment !== 'table_service' || tableNumber.trim().length > 0;
-  const canSubmit = emailValid && nameValid && tableValid && items.length > 0 && !submitting;
+  const canSubmit =
+    emailValid && nameValid && tableValid && items.length > 0 && !submitting && (!legalRequired || legalAccepted);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -275,8 +281,26 @@ export default function CheckoutPage() {
 
           <PaymentMethods />
 
+          {legalRequired && (
+            <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, color: 'var(--ink-2)' }}>
+              <input
+                type="checkbox"
+                checked={legalAccepted}
+                onChange={(e) => setLegalAccepted(e.target.checked)}
+                style={{ marginTop: 2 }}
+              />
+              <span>
+                Ich akzeptiere die{' '}
+                {shop?.legal?.terms && <Link href={`/${eventId}/legal/agb`} target="_blank">AGB</Link>}
+                {shop?.legal?.terms && shop?.legal?.cancellation && ' und habe die '}
+                {shop?.legal?.cancellation && <Link href={`/${eventId}/legal/widerruf`} target="_blank">Widerrufsbelehrung</Link>}
+                {' '}zur Kenntnis genommen.
+              </span>
+            </label>
+          )}
+
           <button type="submit" className="btn btn--primary" disabled={!canSubmit} style={{ padding: '14px 22px', fontSize: 15 }}>
-            {submitting ? 'Wird verbunden …' : 'Jetzt bezahlen'}
+            {submitting ? 'Wird verbunden …' : 'Zahlungspflichtig bestellen'}
           </button>
         </form>
 
@@ -359,12 +383,18 @@ export default function CheckoutPage() {
               {formatPrice(total, currency)}
             </span>
           </div>
+          <p style={{ fontSize: 12, color: 'var(--mute)', marginTop: 12 }}>
+            {vatExempt
+              ? 'Gemäß § 19 UStG wird keine Umsatzsteuer ausgewiesen.'
+              : 'Alle Preise inkl. gesetzlicher MwSt.'}
+          </p>
           <p style={{ fontSize: 11, color: 'var(--mute)', marginTop: 12 }}>
             Bezahlung erfolgt sicher über SumUp. Erst nach erfolgreicher Zahlung wird die Bestellung erstellt.
           </p>
         </aside>
       </div>
     </main>
+    <LegalFooter eventId={eventId} legal={shopQuery.data?.data.legal} />
     </>
   );
 }
